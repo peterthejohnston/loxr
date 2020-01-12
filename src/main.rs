@@ -1,8 +1,12 @@
 use std::fmt;
 
+const DEBUG: bool = true;
+const STACK_MAX: usize = 256;
+
 enum Opcode {
     Return,
     Constant,
+    Negate,
     Error,
 }
 
@@ -11,6 +15,7 @@ impl From<Opcode> for u8 {
         match opcode {
             Opcode::Return => 0,
             Opcode::Constant => 1,
+            Opcode::Negate => 2,
             // This should never be used
             Opcode::Error => std::u8::MAX,
         }
@@ -22,13 +27,15 @@ impl From<u8> for Opcode {
         match n {
             0 => Opcode::Return,
             1 => Opcode::Constant,
+            2 => Opcode::Negate,
             _ => Opcode::Error,
         }
     }
 }
 
+#[derive(Copy, Clone)]
 enum Value {
-    Number(f32),
+    Number(f64),
 }
 
 impl fmt::Display for Value {
@@ -105,6 +112,10 @@ impl Chunk {
                 println!("{:16} {:4} '{}'", "OP_CONSTANT", addr, self.constants[addr]);
                 offset + 2
             },
+            Opcode::Negate => {
+                println!("OP_NEGATE");
+                offset + 1
+            },
             Opcode::Return => {
                 println!("OP_RETURN");
                 offset + 1
@@ -117,6 +128,71 @@ impl Chunk {
     }
 }
 
+enum InterpretError {
+    CompileError,
+    RuntimeError,
+}
+
+struct VM {
+    ip: usize,
+    stack: [Value; STACK_MAX],
+    stack_top: u8,
+}
+
+impl VM {
+    fn new() -> VM {
+        VM {
+            ip: 0,
+            stack: [Value::Number(0.0); STACK_MAX],
+            stack_top: 0,
+        }
+    }
+
+    fn push(&mut self, value: Value) {
+        self.stack[self.stack_top as usize] = value;
+        self.stack_top += 1;
+    }
+
+    fn pop(&mut self) -> Value {
+        self.stack_top -= 1;
+        self.stack[self.stack_top as usize]
+    }
+
+    fn interpret(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
+        loop {
+            if DEBUG {
+                // Print stack
+                print!("\t");
+                let mut i = 0;
+                while i < self.stack_top {
+                    print!("[ {} ]", self.stack[i as usize]);
+                    i += 1;
+                }
+                println!("");
+                chunk.disassemble_instruction(self.ip);
+            }
+            self.ip = match Opcode::from(chunk.code[self.ip]) {
+                Opcode::Return => {
+                    println!("{}", self.pop());
+                    return Ok(());
+                },
+                Opcode::Constant => {
+                    let addr = chunk.code[self.ip + 1] as usize;
+                    let constant = &chunk.constants[addr];
+                    self.push(*constant);
+                    self.ip + 2
+                },
+                Opcode::Negate => {
+                    let Value::Number(n) = self.pop();
+                    self.push(Value::Number(-n));
+                    self.ip + 1
+                },
+                _ => return Err(InterpretError::RuntimeError),
+            }
+        }
+    }
+}
+
 fn main() {
     let mut chunk = Chunk::new();
 
@@ -124,7 +200,12 @@ fn main() {
 
     chunk.write(Opcode::Constant as u8, 123);
     chunk.write(0, 123);
+    chunk.write(Opcode::Negate as u8, 123);
     chunk.write(Opcode::Return as u8, 123);
 
-    chunk.disassemble("test chunk");
+    match VM::new().interpret(&chunk) {
+        Ok(()) => (),
+        Err(InterpretError::CompileError) => println!("Compile error!"),
+        Err(InterpretError::RuntimeError) => println!("Runtime error!"),
+    }
 }
