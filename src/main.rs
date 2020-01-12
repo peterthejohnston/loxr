@@ -1,13 +1,30 @@
 use std::fmt;
 
-enum Byte {
-    Opcode(Opcode),
-    Param(usize),
+enum Opcode {
+    Return,
+    Constant,
+    Error,
 }
 
-enum Opcode {
-    Constant,
-    Return,
+impl From<Opcode> for u8 {
+    fn from(opcode: Opcode) -> u8 {
+        match opcode {
+            Opcode::Return => 0,
+            Opcode::Constant => 1,
+            // This should never be used
+            Opcode::Error => std::u8::MAX,
+        }
+    }
+}
+
+impl From<u8> for Opcode {
+    fn from(n: u8) -> Opcode {
+        match n {
+            0 => Opcode::Return,
+            1 => Opcode::Constant,
+            _ => Opcode::Error,
+        }
+    }
 }
 
 enum Value {
@@ -24,7 +41,7 @@ impl fmt::Display for Value {
 
 // Why is it called chunk...
 struct Chunk {
-    code: Vec<Byte>,
+    code: Vec<u8>,
     // [run length] [line no] ...
     lines: Vec<usize>,
     constants: Vec<Value>,
@@ -53,7 +70,7 @@ impl Chunk {
         current_line
     }
 
-    fn write(&mut self, byte: Byte, line_number: usize) {
+    fn write(&mut self, byte: u8, line_number: usize) {
         self.code.push(byte);
         if !self.lines.is_empty() && self.lines.last().unwrap() == &line_number {
             // We are still on the last line. Increment run length
@@ -82,21 +99,18 @@ impl Chunk {
         } else {
             print!("{:4} ", self.line_at(offset));
         }
-        match self.code[offset] {
-            Byte::Opcode(Opcode::Constant) => {
-                if let Byte::Param(addr) = self.code[offset + 1] {
-                    println!("{:16} {:4} '{}'", "OP_CONSTANT", addr, self.constants[addr]);
-                } else {
-                    println!("ERROR");
-                }
+        match Opcode::from(self.code[offset]) {
+            Opcode::Constant => {
+                let addr = self.code[offset + 1] as usize;
+                println!("{:16} {:4} '{}'", "OP_CONSTANT", addr, self.constants[addr]);
                 offset + 2
             },
-            Byte::Opcode(Opcode::Return) => {
+            Opcode::Return => {
                 println!("OP_RETURN");
                 offset + 1
             },
-            _ => {
-                println!("ERROR");
+            Opcode::Error => {
+                println!("INVALID OPCODE");
                 std::usize::MAX
             }
         }
@@ -108,9 +122,9 @@ fn main() {
 
     chunk.constants.push(Value::Number(1.2));
 
-    chunk.write(Byte::Opcode(Opcode::Constant), 123);
-    chunk.write(Byte::Param(0), 123);
-    chunk.write(Byte::Opcode(Opcode::Return), 123);
+    chunk.write(Opcode::Constant as u8, 123);
+    chunk.write(0, 123);
+    chunk.write(Opcode::Return as u8, 123);
 
     chunk.disassemble("test chunk");
 }
