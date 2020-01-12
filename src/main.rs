@@ -6,16 +6,24 @@ const STACK_MAX: usize = 256;
 enum Opcode {
     Return,
     Constant,
-    Negate,
+    Neg,
+    Add,
+    Sub,
+    Mul,
+    Div,
     Error,
 }
 
 impl From<Opcode> for u8 {
     fn from(opcode: Opcode) -> u8 {
         match opcode {
-            Opcode::Return => 0,
+            Opcode::Return   => 0,
             Opcode::Constant => 1,
-            Opcode::Negate => 2,
+            Opcode::Neg      => 2,
+            Opcode::Add      => 3,
+            Opcode::Sub      => 4,
+            Opcode::Mul      => 5,
+            Opcode::Div      => 6,
             // This should never be used
             Opcode::Error => std::u8::MAX,
         }
@@ -27,7 +35,11 @@ impl From<u8> for Opcode {
         match n {
             0 => Opcode::Return,
             1 => Opcode::Constant,
-            2 => Opcode::Negate,
+            2 => Opcode::Neg,
+            3 => Opcode::Add,
+            4 => Opcode::Sub,
+            5 => Opcode::Mul,
+            6 => Opcode::Div,
             _ => Opcode::Error,
         }
     }
@@ -112,14 +124,12 @@ impl Chunk {
                 println!("{:16} {:4} '{}'", "OP_CONSTANT", addr, self.constants[addr]);
                 offset + 2
             },
-            Opcode::Negate => {
-                println!("OP_NEGATE");
-                offset + 1
-            },
-            Opcode::Return => {
-                println!("OP_RETURN");
-                offset + 1
-            },
+            Opcode::Neg => { println!("OP_NEG"); offset + 1 },
+            Opcode::Add => { println!("OP_ADD"); offset + 1 },
+            Opcode::Sub => { println!("OP_SUB"); offset + 1 },
+            Opcode::Mul => { println!("OP_MUL"); offset + 1 },
+            Opcode::Div => { println!("OP_DIV"); offset + 1 },
+            Opcode::Return => { println!("OP_RETURN"); offset + 1 },
             Opcode::Error => {
                 println!("INVALID OPCODE");
                 std::usize::MAX
@@ -158,6 +168,19 @@ impl VM {
         self.stack[self.stack_top as usize]
     }
 
+    fn unary_op(&mut self, op: &dyn Fn(f64) -> f64) -> usize {
+        let Value::Number(lhs) = self.pop();
+        self.push(Value::Number(op(lhs)));
+        self.ip + 1
+    }
+
+    fn binary_op(&mut self, op: &dyn Fn(f64, f64) -> f64) -> usize {
+        let Value::Number(rhs) = self.pop();
+        let Value::Number(lhs) = self.pop();
+        self.push(Value::Number(op(lhs, rhs)));
+        self.ip + 1
+    }
+
     fn interpret(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
         loop {
             if DEBUG {
@@ -182,11 +205,11 @@ impl VM {
                     self.push(*constant);
                     self.ip + 2
                 },
-                Opcode::Negate => {
-                    let Value::Number(n) = self.pop();
-                    self.push(Value::Number(-n));
-                    self.ip + 1
-                },
+                Opcode::Neg => self.unary_op(&std::ops::Neg::neg),
+                Opcode::Add => self.binary_op(&std::ops::Add::add),
+                Opcode::Sub => self.binary_op(&std::ops::Sub::sub),
+                Opcode::Mul => self.binary_op(&std::ops::Mul::mul),
+                Opcode::Div => self.binary_op(&std::ops::Div::div),
                 _ => return Err(InterpretError::RuntimeError),
             }
         }
@@ -197,11 +220,24 @@ fn main() {
     let mut chunk = Chunk::new();
 
     chunk.constants.push(Value::Number(1.2));
-
     chunk.write(Opcode::Constant as u8, 123);
     chunk.write(0, 123);
-    chunk.write(Opcode::Negate as u8, 123);
+
+    chunk.constants.push(Value::Number(3.4));
+    chunk.write(Opcode::Constant as u8, 123);
+    chunk.write(1, 123);
+
+    chunk.write(Opcode::Add as u8, 123);
+
+    chunk.constants.push(Value::Number(5.6));
+    chunk.write(Opcode::Constant as u8, 123);
+    chunk.write(2, 123);
+
+    chunk.write(Opcode::Div as u8, 123);
+    chunk.write(Opcode::Neg as u8, 123);
     chunk.write(Opcode::Return as u8, 123);
+
+    println!("{:?}", chunk.code);
 
     match VM::new().interpret(&chunk) {
         Ok(()) => (),
