@@ -25,6 +25,7 @@ impl fmt::Display for Value {
 // Why is it called chunk...
 struct Chunk {
     code: Vec<Byte>,
+    // [run length] [line no] ...
     lines: Vec<usize>,
     constants: Vec<Value>,
 }
@@ -38,9 +39,31 @@ impl Chunk {
         }
     }
 
-    fn write(&mut self, byte: Byte, line: usize) {
+    fn line_at(&self, offset: usize) -> usize {
+        let mut current_line = 0;
+        let mut bytes = 0;
+        for line_info in self.lines.chunks(2) {
+            let (run_length, line_number) = (line_info[0], line_info[1]);
+            bytes += run_length;
+            if offset > bytes {
+                break;
+            }
+            current_line = line_number;
+        }
+        current_line
+    }
+
+    fn write(&mut self, byte: Byte, line_number: usize) {
         self.code.push(byte);
-        self.lines.push(line);
+        if !self.lines.is_empty() && self.lines.last().unwrap() == &line_number {
+            // We are still on the last line. Increment run length
+            let i = self.lines.len() - 2;
+            self.lines[i] += 1;
+            return;
+        }
+        // Add an entry for a new line with run length 1
+        self.lines.push(1);
+        self.lines.push(line_number);
     }
 
     fn disassemble(&self, name: &str) {
@@ -54,10 +77,10 @@ impl Chunk {
 
     fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
-        if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
+        if offset > 0 && self.line_at(offset) == self.line_at(offset - 1) {
             print!("   | ");
         } else {
-            print!("{:4} ", self.lines[offset]);
+            print!("{:4} ", self.line_at(offset));
         }
         match self.code[offset] {
             Byte::Opcode(Opcode::Constant) => {
