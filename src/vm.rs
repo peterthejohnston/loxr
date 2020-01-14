@@ -1,4 +1,5 @@
 use crate::chunk::{Chunk, Opcode};
+use crate::compiler::compile;
 use crate::value::Value;
 
 const DEBUG: bool = true;
@@ -47,7 +48,12 @@ impl VM {
         self.ip + 1
     }
 
-    pub fn interpret(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
+    pub fn interpret<'a>(&self, source: &'a str) -> Result<(), InterpretError> {
+        compile(source);
+        Ok(())
+    }
+
+    pub fn interpret_chunk(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {
         loop {
             if DEBUG {
                 // Print stack

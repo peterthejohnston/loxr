@@ -1,33 +1,56 @@
-use lox::chunk::{Chunk, Opcode};
-use lox::value::Value;
+use std::env;
+use std::fs::File;
+use std::io::{self, Read, Write};
+
 use lox::vm::{VM, InterpretError};
 
-fn main() {
-    let mut chunk = Chunk::new();
+fn repl() {
+    let stdin = io::stdin();
+    let vm = VM::new();
 
-    let constant = chunk.add_constant(Value::Number(1.2));
-    chunk.write(Opcode::Constant as u8, 123);
-    chunk.write(constant as u8, 123);
+    loop {
+        print!("> ");
+        io::stdout().flush().unwrap();
 
-    let constant = chunk.add_constant(Value::Number(3.4));
-    chunk.write(Opcode::Constant as u8, 123);
-    chunk.write(constant as u8, 123);
+        let mut input = String::new();
+        if !stdin.read_line(&mut input).is_ok() {
+            eprintln!("Could not read from stdin");
+            return;
+        }
 
-    chunk.write(Opcode::Add as u8, 123);
+        match vm.interpret(&input) {
+            Ok(()) => (),
+            Err(InterpretError::CompileError) => println!("Compile error!"),
+            Err(InterpretError::RuntimeError) => println!("Runtime error!"),
+        }
+    }
+}
 
-    let constant = chunk.add_constant(Value::Number(5.6));
-    chunk.write(Opcode::Constant as u8, 123);
-    chunk.write(constant as u8, 123);
+fn run_file(filename: &str) {
+    let mut file = match File::open(filename) {
+        Ok(file) => file,
+        Err(_) => { eprintln!("Could not find file {}", filename); return }
+    };
+    let mut source = String::new();
+    match file.read_to_string(&mut source) {
+        Ok(_) => (),
+        Err(_) => { eprintln!("Failed to read from file"); return },
+    }
 
-    chunk.write(Opcode::Div as u8, 123);
-    chunk.write(Opcode::Neg as u8, 123);
-    chunk.write(Opcode::Return as u8, 123);
-
-    chunk.disassemble("arithmetic calculator");
-
-    match VM::new().interpret(&chunk) {
+    match VM::new().interpret(&source) {
         Ok(()) => (),
         Err(InterpretError::CompileError) => println!("Compile error!"),
         Err(InterpretError::RuntimeError) => println!("Runtime error!"),
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() == 1 {
+        repl();
+    } else if args.len() == 2 {
+        run_file(&args[1]);
+    } else {
+        println!("Usage: lox [path]");
     }
 }
