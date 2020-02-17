@@ -28,7 +28,7 @@ struct Token<'a> {
 }
 
 struct Scanner<'a> {
-    source: String,     // The source string to be scanned
+    source: &'a str,     // The source string to be scanned
     iter: MultiPeek<Chars<'a>>,
     start: usize,       // The index of the start of the current lexeme
     current: usize,     // The index of the current character
@@ -38,7 +38,7 @@ struct Scanner<'a> {
 impl<'a> Scanner<'a> {
     fn new(source: &'a str) -> Self {
         Scanner {
-            source: source.to_string(),
+            source,
             iter: multipeek(source.chars()),
             start: 0,
             current: 0,
