@@ -48,7 +48,7 @@ impl VM {
         self.ip + 1
     }
 
-    pub fn interpret<'a>(&self, source: &'a str) -> Result<(), InterpretError> {
+    pub fn interpret(&self, source: &str) -> Result<(), InterpretError> {
         compile(source);
         Ok(())
     }
