@@ -35,13 +35,13 @@ impl VM {
         self.stack[self.stack_top as usize]
     }
 
-    fn unary_op(&mut self, op: &dyn Fn(f64) -> f64) -> usize {
+    fn unary_op(&mut self, op: impl Fn(f64) -> f64) -> usize {
         let Value::Number(lhs) = self.pop();
         self.push(Value::Number(op(lhs)));
         self.ip + 1
     }
 
-    fn binary_op(&mut self, op: &dyn Fn(f64, f64) -> f64) -> usize {
+    fn binary_op(&mut self, op: impl Fn(f64, f64) -> f64) -> usize {
         let Value::Number(rhs) = self.pop();
         let Value::Number(lhs) = self.pop();
         self.push(Value::Number(op(lhs, rhs)));
