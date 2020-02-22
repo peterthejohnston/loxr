@@ -15,7 +15,7 @@ enum TokenType {
     BangEqual, EqualEqual, LessEqual, GreaterEqual,
 
     // Literals
-    String, Number,
+    String, Number, Identifier,
 
     EOF,
     Error,
@@ -106,11 +106,8 @@ impl<'a> Scanner<'a> {
     }
 
     fn consume_digits(&mut self) {
-        loop {
-            match self.iter.peek() {
-                Some('0'..='9') => self.advance(),
-                _ => break,
-            };
+        while let Some('0'..='9') = self.iter.peek() {
+            self.advance();
         }
         self.iter.reset_peek();
     }
@@ -122,18 +119,26 @@ impl<'a> Scanner<'a> {
         match self.iter.peek() {
             Some('.') => {
                 // Second char of lookahead to see if we should consume '.'
-                match self.iter.peek() {
-                    Some('0'..='9') => {
-                        self.advance();
-                        self.consume_digits();
-                    },
-                    _ => (),
-                }
+                self.consume_digits();
             },
             _ => (),
         }
+        self.iter.reset_peek();
 
         self.make_token(TokenType::Number)
+    }
+
+    fn identifier_token(&mut self) -> Token {
+        while let Some(c) = self.iter.peek() {
+            if c.is_alphanumeric() {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        self.iter.reset_peek();
+
+        self.make_token(TokenType::Identifier)
     }
 
     fn skip_comment(&mut self) {
@@ -214,6 +219,7 @@ impl<'a> Scanner<'a> {
             },
             '"' => self.string_token(),
             '0'..='9' => self.number_token(),
+            c if c.is_alphabetic() => self.identifier_token(),
             _ => self.error_token("Unexpected character"),
         }
     }
