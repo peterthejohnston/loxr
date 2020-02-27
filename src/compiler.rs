@@ -17,6 +17,12 @@ enum TokenType {
     // Literals
     String, Number, Identifier,
 
+    // Keywords
+    And, Class, Else, False,
+    For, Fun, If, Nil, Or,
+    Print, Return, Super, This,
+    True, Var, While,
+
     EOF,
     Error,
 }
@@ -54,6 +60,7 @@ impl<'a> Scanner<'a> {
         if self.is_at_end() {
             false
         } else if self.iter.peek().unwrap() != &expected {
+            self.iter.reset_peek();
             false
         } else {
             self.current += 1;
@@ -128,6 +135,22 @@ impl<'a> Scanner<'a> {
         self.make_token(TokenType::Number)
     }
 
+    fn check_keyword(
+        &mut self,
+        start: usize, length: usize, rest: &str, token_type: TokenType
+    ) -> Token {
+        if self.current - self.start != start + length {
+            // TODO: return Identifier? (short circuit)
+        }
+        let keyword_start = self.start + start;
+        let keyword_end = self.start + start + length;
+        if &self.source[keyword_start..keyword_end] == rest {
+            self.make_token(token_type)
+        } else {
+            self.make_token(TokenType::Identifier)
+        }
+    }
+
     fn identifier_token(&mut self) -> Token {
         while let Some(c) = self.iter.peek() {
             if c.is_alphanumeric() {
@@ -138,7 +161,37 @@ impl<'a> Scanner<'a> {
         }
         self.iter.reset_peek();
 
-        self.make_token(TokenType::Identifier)
+        // Check if identifier matches any reserved keywords
+        // Basically a tiny trie to avoid having to match on the entire token
+        match &self.source[self.start..(self.start+1)] {
+            "a" => self.check_keyword(1, 2, "nd", TokenType::And),
+            "c" => self.check_keyword(1, 4, "lass", TokenType::Class),
+            "e" => self.check_keyword(1, 3, "lse", TokenType::Else),
+            "f" if self.current - self.start > 1 => {
+                match &self.source[(self.start+1)..(self.start+2)] {
+                    "a" => self.check_keyword(2, 3, "lse", TokenType::False),
+                    "o" => self.check_keyword(2, 1, "r", TokenType::For),
+                    "u" => self.check_keyword(2, 1, "n", TokenType::Fun),
+                    _ => self.make_token(TokenType::Identifier),
+                }
+            },
+            "i" => self.check_keyword(1, 1, "f", TokenType::If),
+            "n" => self.check_keyword(1, 2, "il", TokenType::Nil),
+            "o" => self.check_keyword(1, 1, "r", TokenType::Or),
+            "p" => self.check_keyword(1, 4, "rint", TokenType::Print),
+            "r" => self.check_keyword(1, 5, "eturn", TokenType::Return),
+            "s" => self.check_keyword(1, 4, "uper", TokenType::Super),
+            "t" if self.current - self.start > 1 => {
+                match &self.source[(self.start+1)..(self.start+2)] {
+                    "h" => self.check_keyword(2, 2, "is", TokenType::This),
+                    "r" => self.check_keyword(2, 2, "ue", TokenType::True),
+                    _ => self.make_token(TokenType::Identifier),
+                }
+            },
+            "v" => self.check_keyword(1, 2, "ar", TokenType::Var),
+            "w" => self.check_keyword(1, 4, "hile", TokenType::While),
+            _ => self.make_token(TokenType::Identifier),
+        }
     }
 
     fn skip_comment(&mut self) {
