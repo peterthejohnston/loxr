@@ -48,9 +48,10 @@ impl VM {
         self.ip + 1
     }
 
-    pub fn interpret(&self, source: &str) -> Result<(), InterpretError> {
-        compile(source);
-        Ok(())
+    pub fn interpret(&mut self, source: &str) -> Result<(), InterpretError> {
+        let chunk = compile(source)?;
+
+        self.interpret_chunk(&chunk)
     }
 
     pub fn interpret_chunk(&mut self, chunk: &Chunk) -> Result<(), InterpretError> {

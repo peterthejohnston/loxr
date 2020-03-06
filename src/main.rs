@@ -6,7 +6,7 @@ use lox::vm::{VM, InterpretError};
 
 fn repl() {
     let stdin = io::stdin();
-    let vm = VM::new();
+    let mut vm = VM::new();
 
     loop {
         print!("> ");
