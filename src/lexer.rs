@@ -43,7 +43,7 @@ impl<'a> Lexer<'a> {
         self.iter.next().unwrap()
     }
 
-    fn make_token(&self, token_type: TokenType) -> Token {
+    fn make_token(&self, token_type: TokenType) -> Token<'a> {
         Token {
             token_type,
             lexeme: &self.source[self.start..self.current],
@@ -59,7 +59,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn string_token(&mut self) -> Token {
+    fn string_token(&mut self) -> Token<'a> {
         while !self.is_at_end() {
             match self.iter.peek() {
                 Some('"') => break,
@@ -88,7 +88,7 @@ impl<'a> Lexer<'a> {
         self.iter.reset_peek();
     }
 
-    fn number_token(&mut self) -> Token {
+    fn number_token(&mut self) -> Token<'a> {
         self.consume_digits();
 
         // Look for a fractional part
@@ -107,7 +107,7 @@ impl<'a> Lexer<'a> {
     fn check_keyword(
         &mut self,
         start: usize, length: usize, rest: &str, token_type: TokenType
-    ) -> Token {
+    ) -> Token<'a> {
         if self.current - self.start != start + length {
             // TODO: return Identifier? (short circuit)
         }
@@ -120,7 +120,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn identifier_token(&mut self) -> Token {
+    fn identifier_token(&mut self) -> Token<'a> {
         while let Some(c) = self.iter.peek() {
             if c.is_alphanumeric() {
                 self.advance();
@@ -194,7 +194,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn lex_token(&mut self) -> Token {
+    pub fn lex_token(&mut self) -> Token<'a> {
         self.skip_whitespace();
 
         self.start = self.current;
