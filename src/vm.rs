@@ -2,7 +2,7 @@ use crate::chunk::{Chunk, Opcode};
 use crate::compiler::compile;
 use crate::value::Value;
 
-const DEBUG: bool = true;
+pub const DEBUG: bool = true;
 const STACK_MAX: usize = 256;
 
 pub enum InterpretError {
