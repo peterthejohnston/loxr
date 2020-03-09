@@ -77,25 +77,39 @@ struct ParseRule {
 fn get_parse_rule(token_type: TokenType) -> ParseRule {
     match token_type {
         TokenType::LeftParen => ParseRule {
-            prefix: Some(|parser| parser.grouping()), infix: None, precedence: Precedence::None,
+            prefix: Some(|parser| parser.grouping()),
+            infix: None,
+            precedence: Precedence::None,
         },
         TokenType::Minus => ParseRule {
-            prefix: Some(|parser| parser.unary()), infix: Some(|parser| parser.binary()), precedence: Precedence::Term,
+            prefix: Some(|parser| parser.unary()),
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Term,
         },
         TokenType::Plus => ParseRule {
-            prefix: None, infix: Some(|parser| parser.binary()), precedence: Precedence::Term,
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Term,
         },
         TokenType::Slash => ParseRule {
-            prefix: None, infix: Some(|parser| parser.binary()), precedence: Precedence::Factor,
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Factor,
         },
         TokenType::Star => ParseRule {
-            prefix: None, infix: Some(|parser| parser.binary()), precedence: Precedence::Factor,
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Factor,
         },
         TokenType::Number => ParseRule {
-            prefix: Some(|parser| parser.number()), infix: None, precedence: Precedence::None,
+            prefix: Some(|parser| parser.number()),
+            infix: None,
+            precedence: Precedence::None,
         },
         _ => ParseRule {
-            prefix: None, infix: None, precedence: Precedence::None,
+            prefix: None,
+            infix: None,
+            precedence: Precedence::None,
         },
     }
 }
@@ -196,7 +210,7 @@ impl<'a> Parser<'a> {
         let op_type = self.previous.token_type;
         self.parse_precedence(Precedence::Unary);
 
-        // Should always be true
+        // TODO: Should always be true
         if op_type == TokenType::Minus {
             self.emit_byte(Opcode::Neg.into())
         }
@@ -215,7 +229,7 @@ impl<'a> Parser<'a> {
             TokenType::Minus => self.emit_byte(Opcode::Sub.into()),
             TokenType::Star => self.emit_byte(Opcode::Mul.into()),
             TokenType::Slash => self.emit_byte(Opcode::Div.into()),
-            _ => (), // Should never happen
+            _ => (), // TODO: Should never happen
         }
     }
 

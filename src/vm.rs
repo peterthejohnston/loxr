@@ -25,6 +25,12 @@ impl VM {
         }
     }
 
+    fn reset(&mut self) {
+        self.ip = 0;
+        self.stack = [Value::Number(0.0); STACK_MAX];
+        self.stack_top = 0;
+    }
+
     fn push(&mut self, value: Value) {
         self.stack[self.stack_top as usize] = value;
         self.stack_top += 1;
@@ -49,6 +55,8 @@ impl VM {
     }
 
     pub fn interpret(&mut self, source: &str) -> Result<(), InterpretError> {
+        self.reset();
+
         let chunk = compile(source)?;
 
         self.interpret_chunk(&chunk)
