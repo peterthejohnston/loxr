@@ -106,6 +106,21 @@ fn get_parse_rule(token_type: TokenType) -> ParseRule {
             infix: None,
             precedence: Precedence::None,
         },
+        TokenType::False => ParseRule {
+            prefix: Some(|parser| parser.literal()),
+            infix: None,
+            precedence: Precedence::None,
+        },
+        TokenType::True => ParseRule {
+            prefix: Some(|parser| parser.literal()),
+            infix: None,
+            precedence: Precedence::None,
+        },
+        TokenType::Nil => ParseRule {
+            prefix: Some(|parser| parser.literal()),
+            infix: None,
+            precedence: Precedence::None,
+        },
         _ => ParseRule {
             prefix: None,
             infix: None,
@@ -199,6 +214,15 @@ impl<'a> Parser<'a> {
         // TODO: handle parse error
         let n = self.previous.lexeme.parse::<f64>().unwrap();
         self.emit_constant(Value::Number(n));
+    }
+
+    fn literal(&mut self) {
+        match self.previous.token_type {
+            TokenType::False => self.emit_constant(Value::Bool(false)),
+            TokenType::True => self.emit_constant(Value::Bool(true)),
+            TokenType::Nil => self.emit_constant(Value::Nil),
+            _ => (), // Should be unreachable
+        }
     }
 
     fn grouping(&mut self) {

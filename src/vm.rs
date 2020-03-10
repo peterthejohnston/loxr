@@ -41,17 +41,43 @@ impl VM {
         self.stack[self.stack_top as usize]
     }
 
-    fn unary_op(&mut self, op: impl Fn(f64) -> f64) -> usize {
-        let Value::Number(lhs) = self.pop();
-        self.push(Value::Number(op(lhs)));
-        self.ip + 1
+    fn runtime_error(&mut self, chunk: &Chunk, message: &str) {
+        eprintln!("{}", message);
+        let line = chunk.line_at(self.ip);
+        eprintln!("[line {}] in script", line);
+
+        self.reset();
     }
 
-    fn binary_op(&mut self, op: impl Fn(f64, f64) -> f64) -> usize {
-        let Value::Number(rhs) = self.pop();
-        let Value::Number(lhs) = self.pop();
-        self.push(Value::Number(op(lhs, rhs)));
-        self.ip + 1
+    fn unary_op(&mut self, chunk: &Chunk, op: impl Fn(f64) -> f64
+    ) -> Result<usize, InterpretError>
+    {
+        match self.pop() {
+            Value::Number(lhs) => {
+                self.push(Value::Number(op(lhs)));
+                Ok(self.ip + 1)
+            },
+            _ => {
+                self.runtime_error(chunk, "Operand must be a number");
+                Err(InterpretError::RuntimeError)
+            }
+        }
+    }
+
+    fn binary_op(&mut self, chunk: &Chunk, op: impl Fn(f64, f64) -> f64
+    ) -> Result<usize, InterpretError>
+    {
+        // TODO: any way to avoid popping until we know they're Numbers?
+        match (self.pop(), self.pop()) {
+            (Value::Number(rhs), Value::Number(lhs)) => {
+                self.push(Value::Number(op(lhs, rhs)));
+                return Ok(self.ip + 1)
+            },
+            _ => {
+                self.runtime_error(chunk, "Operands must be numbers");
+                Err(InterpretError::RuntimeError)
+            }
+        }
     }
 
     pub fn interpret(&mut self, source: &str) -> Result<(), InterpretError> {
@@ -86,11 +112,14 @@ impl VM {
                     self.push(*constant);
                     self.ip + 2
                 },
-                Opcode::Neg => self.unary_op(&std::ops::Neg::neg),
-                Opcode::Add => self.binary_op(&std::ops::Add::add),
-                Opcode::Sub => self.binary_op(&std::ops::Sub::sub),
-                Opcode::Mul => self.binary_op(&std::ops::Mul::mul),
-                Opcode::Div => self.binary_op(&std::ops::Div::div),
+                Opcode::Nil => { self.push(Value::Nil); self.ip + 1 },
+                Opcode::True => { self.push(Value::Bool(true)); self.ip + 1 },
+                Opcode::False => { self.push(Value::Bool(false)); self.ip + 1 },
+                Opcode::Neg => self.unary_op(chunk, &std::ops::Neg::neg)?,
+                Opcode::Add => self.binary_op(chunk, &std::ops::Add::add)?,
+                Opcode::Sub => self.binary_op(chunk, &std::ops::Sub::sub)?,
+                Opcode::Mul => self.binary_op(chunk, &std::ops::Mul::mul)?,
+                Opcode::Div => self.binary_op(chunk, &std::ops::Div::div)?,
                 _ => return Err(InterpretError::RuntimeError),
             }
         }

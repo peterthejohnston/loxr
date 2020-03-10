@@ -3,6 +3,9 @@ use crate::value::Value;
 pub enum Opcode {
     Return,
     Constant,
+    Nil,
+    True,
+    False,
     Neg,
     Add,
     Sub,
@@ -16,13 +19,16 @@ impl From<Opcode> for u8 {
         match opcode {
             Opcode::Return   => 0,
             Opcode::Constant => 1,
-            Opcode::Neg      => 2,
-            Opcode::Add      => 3,
-            Opcode::Sub      => 4,
-            Opcode::Mul      => 5,
-            Opcode::Div      => 6,
+            Opcode::Nil      => 2,
+            Opcode::True     => 3,
+            Opcode::False    => 4,
+            Opcode::Neg      => 5,
+            Opcode::Add      => 6,
+            Opcode::Sub      => 7,
+            Opcode::Mul      => 8,
+            Opcode::Div      => 9,
             // This should never be used
-            Opcode::Error => std::u8::MAX,
+            Opcode::Error    => std::u8::MAX,
         }
     }
 }
@@ -32,11 +38,14 @@ impl From<u8> for Opcode {
         match n {
             0 => Opcode::Return,
             1 => Opcode::Constant,
-            2 => Opcode::Neg,
-            3 => Opcode::Add,
-            4 => Opcode::Sub,
-            5 => Opcode::Mul,
-            6 => Opcode::Div,
+            2 => Opcode::Nil,
+            3 => Opcode::True,
+            4 => Opcode::False,
+            5 => Opcode::Neg,
+            6 => Opcode::Add,
+            7 => Opcode::Sub,
+            8 => Opcode::Mul,
+            9 => Opcode::Div,
             _ => Opcode::Error,
         }
     }
@@ -58,7 +67,7 @@ impl Chunk {
         }
     }
 
-    fn line_at(&self, offset: usize) -> usize {
+    pub fn line_at(&self, offset: usize) -> usize {
         let mut current_line = 0;
         let mut bytes = 0;
         for line_info in self.lines.chunks(2) {
@@ -112,6 +121,9 @@ impl Chunk {
                 println!("{:16} {:4} '{}'", "OP_CONSTANT", addr, self.constants[addr]);
                 offset + 2
             },
+            Opcode::Nil => { println!("OP_NIL"); offset + 1 },
+            Opcode::True => { println!("OP_TRUE"); offset + 1 },
+            Opcode::False => { println!("OP_FALSE"); offset + 1 },
             Opcode::Neg => { println!("OP_NEG"); offset + 1 },
             Opcode::Add => { println!("OP_ADD"); offset + 1 },
             Opcode::Sub => { println!("OP_SUB"); offset + 1 },
