@@ -81,6 +81,11 @@ fn get_parse_rule(token_type: TokenType) -> ParseRule {
             infix: None,
             precedence: Precedence::None,
         },
+        TokenType::Bang => ParseRule {
+            prefix: Some(|parser| parser.unary()),
+            infix: None,
+            precedence: Precedence::Term,
+        },
         TokenType::Minus => ParseRule {
             prefix: Some(|parser| parser.unary()),
             infix: Some(|parser| parser.binary()),
@@ -100,6 +105,36 @@ fn get_parse_rule(token_type: TokenType) -> ParseRule {
             prefix: None,
             infix: Some(|parser| parser.binary()),
             precedence: Precedence::Factor,
+        },
+        TokenType::EqualEqual => ParseRule {
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Equality,
+        },
+        TokenType::BangEqual => ParseRule {
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Equality,
+        },
+        TokenType::Greater => ParseRule {
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Comparison,
+        },
+        TokenType::GreaterEqual => ParseRule {
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Comparison,
+        },
+        TokenType::Less => ParseRule {
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Comparison,
+        },
+        TokenType::LessEqual => ParseRule {
+            prefix: None,
+            infix: Some(|parser| parser.binary()),
+            precedence: Precedence::Comparison,
         },
         TokenType::Number => ParseRule {
             prefix: Some(|parser| parser.number()),
@@ -234,10 +269,11 @@ impl<'a> Parser<'a> {
         let op_type = self.previous.token_type;
         self.parse_precedence(Precedence::Unary);
 
-        // TODO: Should always be true
-        if op_type == TokenType::Minus {
-            self.emit_byte(Opcode::Neg.into())
-        }
+        match op_type {
+            TokenType::Minus => self.emit_byte(Opcode::Neg.into()),
+            TokenType::Bang => self.emit_byte(Opcode::Not.into()),
+            _ => (), // TODO: Should be unreachable
+        };
     }
 
     fn binary(&mut self) {
@@ -253,6 +289,12 @@ impl<'a> Parser<'a> {
             TokenType::Minus => self.emit_byte(Opcode::Sub.into()),
             TokenType::Star => self.emit_byte(Opcode::Mul.into()),
             TokenType::Slash => self.emit_byte(Opcode::Div.into()),
+            TokenType::EqualEqual => self.emit_byte(Opcode::Equal.into()),
+            TokenType::BangEqual => { self.emit_byte(Opcode::Equal.into()); self.emit_byte(Opcode::Not.into()); },
+            TokenType::Greater => self.emit_byte(Opcode::Greater.into()),
+            TokenType::GreaterEqual => { self.emit_byte(Opcode::Less.into()); self.emit_byte(Opcode::Not.into()); },
+            TokenType::Less => self.emit_byte(Opcode::Less.into()),
+            TokenType::LessEqual => { self.emit_byte(Opcode::Greater.into()); self.emit_byte(Opcode::Not.into()); },
             _ => (), // TODO: Should never happen
         }
     }

@@ -7,10 +7,14 @@ pub enum Opcode {
     True,
     False,
     Neg,
+    Not,
     Add,
     Sub,
     Mul,
     Div,
+    Equal,
+    Greater,
+    Less,
     Error,
 }
 
@@ -23,10 +27,14 @@ impl From<Opcode> for u8 {
             Opcode::True     => 3,
             Opcode::False    => 4,
             Opcode::Neg      => 5,
-            Opcode::Add      => 6,
-            Opcode::Sub      => 7,
-            Opcode::Mul      => 8,
-            Opcode::Div      => 9,
+            Opcode::Not      => 6,
+            Opcode::Add      => 7,
+            Opcode::Sub      => 8,
+            Opcode::Mul      => 9,
+            Opcode::Div      => 10,
+            Opcode::Equal    => 11,
+            Opcode::Greater  => 12,
+            Opcode::Less     => 13,
             // This should never be used
             Opcode::Error    => std::u8::MAX,
         }
@@ -36,17 +44,21 @@ impl From<Opcode> for u8 {
 impl From<u8> for Opcode {
     fn from(n: u8) -> Opcode {
         match n {
-            0 => Opcode::Return,
-            1 => Opcode::Constant,
-            2 => Opcode::Nil,
-            3 => Opcode::True,
-            4 => Opcode::False,
-            5 => Opcode::Neg,
-            6 => Opcode::Add,
-            7 => Opcode::Sub,
-            8 => Opcode::Mul,
-            9 => Opcode::Div,
-            _ => Opcode::Error,
+            0  => Opcode::Return,
+            1  => Opcode::Constant,
+            2  => Opcode::Nil,
+            3  => Opcode::True,
+            4  => Opcode::False,
+            5  => Opcode::Neg,
+            6  => Opcode::Not,
+            7  => Opcode::Add,
+            8  => Opcode::Sub,
+            9  => Opcode::Mul,
+            10 => Opcode::Div,
+            11 => Opcode::Equal,
+            12 => Opcode::Greater,
+            13 => Opcode::Less,
+            _  => Opcode::Error,
         }
     }
 }
@@ -125,10 +137,14 @@ impl Chunk {
             Opcode::True => { println!("OP_TRUE"); offset + 1 },
             Opcode::False => { println!("OP_FALSE"); offset + 1 },
             Opcode::Neg => { println!("OP_NEG"); offset + 1 },
+            Opcode::Not => { println!("OP_NOT"); offset + 1 },
             Opcode::Add => { println!("OP_ADD"); offset + 1 },
             Opcode::Sub => { println!("OP_SUB"); offset + 1 },
             Opcode::Mul => { println!("OP_MUL"); offset + 1 },
             Opcode::Div => { println!("OP_DIV"); offset + 1 },
+            Opcode::Equal => { println!("OP_EQUAL"); offset + 1 },
+            Opcode::Greater => { println!("OP_GREATER"); offset + 1 },
+            Opcode::Less => { println!("OP_LESS"); offset + 1 },
             Opcode::Return => { println!("OP_RETURN"); offset + 1 },
             Opcode::Error => {
                 println!("INVALID OPCODE");
