@@ -1,7 +1,7 @@
 use crate::chunk::{Chunk, Opcode};
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenType};
-use crate::value::Value;
+use crate::value::{Value, Obj};
 use crate::vm::{DEBUG, InterpretError};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -136,6 +136,11 @@ fn get_parse_rule(token_type: TokenType) -> ParseRule {
             infix: Some(|parser| parser.binary()),
             precedence: Precedence::Comparison,
         },
+        TokenType::String => ParseRule {
+            prefix: Some(|parser| parser.string()),
+            infix: None,
+            precedence: Precedence::None,
+        },
         TokenType::Number => ParseRule {
             prefix: Some(|parser| parser.number()),
             infix: None,
@@ -249,6 +254,17 @@ impl<'a> Parser<'a> {
         // TODO: handle parse error
         let n = self.previous.lexeme.parse::<f64>().unwrap();
         self.emit_constant(Value::Number(n));
+    }
+
+    fn string(&mut self) {
+        match self.previous.token_type {
+            TokenType::String => {
+                // Trim outer quotes
+                let trimmed = self.previous.lexeme[1..(self.previous.lexeme.len()-1)].to_owned();
+                self.emit_constant(Value::Obj(Box::new(Obj::String(trimmed))))
+            },
+            _ => (), // Should be unreachable
+        }
     }
 
     fn literal(&mut self) {
