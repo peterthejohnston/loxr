@@ -167,7 +167,7 @@ impl VM {
                 Opcode::Constant => {
                     let addr = chunk.code[self.ip + 1] as usize;
                     let constant = &chunk.constants[addr];
-                    self.push((*constant).clone());
+                    self.push((*constant).clone()); // TODO: how does this work with strings
                     self.ip + 2
                 },
                 Opcode::Nil => { self.push(Value::Nil); self.ip + 1 },
